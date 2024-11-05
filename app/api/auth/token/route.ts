@@ -1,26 +1,30 @@
 import { NextResponse } from "next/server";
-import axios from "axios";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const response = await axios.post(
-      "http://sccic-ssoserver.test/oauth/token",
-      body,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await fetch("http://sccic-ssoserver.test/oauth/token", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: "9d6a4488-0aa2-42b3-bc7d-2a296b4b5be4",
+        client_secret: "26VDja09WcxfenMWAjquYyh51B7UteUXw6mh0Q9Q",
+        redirect_uri: "http://localhost:3000/auth/callback",
+        code: body.code,
+      }),
+    });
 
-    return NextResponse.json(response.data);
-  } catch (error: any) {
-    console.error("Token exchange error:", error.response?.data || error);
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("Token exchange error:", error);
     return NextResponse.json(
-      { error: "Token exchange failed" },
+      { error: "Failed to exchange code for token" },
       { status: 500 }
     );
   }

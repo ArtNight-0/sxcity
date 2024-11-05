@@ -4,6 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
+// Fungsi untuk generate random string
+const generateState = () => {
+  return (
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15)
+  );
+};
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,15 +37,22 @@ export default function LoginPage() {
   };
 
   const handleSSOLogin = () => {
-    // Redirect ke halaman auth SSO server
-    window.location.href =
+    const ssoParams = {
+      client_id: "9d6a4488-0aa2-42b3-bc7d-2a296b4b5be4",
+      redirect_uri: "http://localhost:3000/auth/callback",
+      response_type: "code",
+      scope: "",
+      state: generateState(),
+    };
+
+    console.log("SSO Parameters:", ssoParams);
+
+    const ssoUrl =
       "http://sccic-ssoserver.test/oauth/authorize?" +
-      new URLSearchParams({
-        client_id: process.env.NEXT_PUBLIC_SSO_CLIENT_ID || "",
-        redirect_uri: process.env.NEXT_PUBLIC_SSO_REDIRECT_URI || "",
-        response_type: "code",
-        scope: "",
-      }).toString();
+      new URLSearchParams(ssoParams).toString();
+
+    console.log("SSO URL:", ssoUrl);
+    window.location.href = ssoUrl;
   };
 
   return (
@@ -47,13 +62,12 @@ export default function LoginPage() {
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
             Login
           </h2>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
+            <div className="mt-2 text-center text-sm text-red-600">{error}</div>
           )}
+        </div>
+
+        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <input
@@ -101,8 +115,15 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleSSOLogin}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="w-full inline-flex justify-center items-center gap-2 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 000 12zm-1-5a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
               Login dengan SSO
             </button>
           </div>
