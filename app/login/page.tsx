@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import Cookies from "js-cookie";
 
 // Fungsi untuk generate random string
 const generateState = () => {
@@ -27,32 +28,77 @@ export default function LoginPage() {
       });
 
       if (response.data?.data?.access_token) {
-        localStorage.setItem("access_token", response.data.data.access_token);
-        console.log("Token saved:", response.data.data.access_token); // Debug log
+        Cookies.set("token", response.data.data.access_token, {
+          expires: 1,
+          path: "/",
+        });
+
+        console.log("Token saved in cookies");
         router.push("/dashboard");
+        router.refresh();
       }
     } catch (error) {
       console.error("Login error:", error);
+      setError("Login gagal. Silakan cek email dan password Anda.");
     }
   };
 
-  const handleSSOLogin = () => {
-    const ssoParams = {
-      client_id: "9d6a4488-0aa2-42b3-bc7d-2a296b4b5be4",
-      redirect_uri: "http://localhost:3000/auth/callback",
-      response_type: "code",
-      scope: "",
-      state: generateState(),
-    };
+  const handleSSOLogin = async () => {
+    try {
+      // Cek dulu status login di SSO server
+      const checkResponse = await axios
+        .get("http://sccic-ssoserver.test/api/auth/profile", {
+          withCredentials: true,
+        })
+        .catch(() => null);
+      console.log(checkResponse);
 
-    console.log("SSO Parameters:", ssoParams);
+      if (checkResponse?.data?.user) {
+        // Jika sudah login di SSO, langsung minta token
+        const tokenResponse = await axios.post(
+          "http://sccic-ssoserver.test/oauth/token",
+          {
+            grant_type: "password",
+            client_id: process.env.NEXT_PUBLIC_SSO_CLIENT_ID,
+            client_secret: process.env.NEXT_PUBLIC_SSO_CLIENT_SECRET,
+            username: checkResponse.data.user.email,
+          }
+        );
 
-    const ssoUrl =
-      "http://sccic-ssoserver.test/oauth/authorize?" +
-      new URLSearchParams(ssoParams).toString();
+        if (tokenResponse.data?.access_token) {
+          Cookies.set("token", tokenResponse.data.access_token, {
+            expires: 1,
+            path: "/",
+          });
+          router.push("/dashboard");
+          return;
+        }
+      }
 
-    console.log("SSO URL:", ssoUrl);
-    window.location.href = ssoUrl;
+      // Jika belum login, lanjut ke flow SSO normal
+      const state = generateState();
+      Cookies.set("oauth_state", state, {
+        expires: 1 / 24,
+        path: "/",
+        sameSite: "lax",
+      });
+
+      const ssoParams = {
+        client_id: process.env.NEXT_PUBLIC_SSO_CLIENT_ID,
+        redirect_uri: process.env.NEXT_PUBLIC_SSO_REDIRECT_URI,
+        response_type: "code",
+        scope: "*",
+        state: state,
+      };
+
+      const ssoUrl =
+        "http://sccic-ssoserver.test/oauth/authorize?" +
+        new URLSearchParams(ssoParams).toString();
+
+      window.location.href = ssoUrl;
+    } catch (error) {
+      console.error("SSO Login error:", error);
+    }
   };
 
   return (

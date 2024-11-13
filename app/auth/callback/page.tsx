@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
+import Cookies from "js-cookie";
 
 export default function CallbackPage() {
   const router = useRouter();
@@ -23,6 +24,10 @@ export default function CallbackPage() {
         });
 
         if (response.data?.access_token) {
+          Cookies.set("token", response.data.access_token, {
+            expires: 1,
+            path: "/",
+          });
           localStorage.setItem("access_token", response.data.access_token);
           router.push("/dashboard");
         } else {

@@ -5,53 +5,59 @@ import DashboardLayout from "../components/DashboardLayout";
 
 export default function GDPPage() {
   const [gdp, setGdp] = useState("");
-  const [population, setPopulation] = useState("");
   const [result, setResult] = useState<number | null>(null);
+  const [urbanizationRate, setUrbanizationRate] = useState<number | null>(null);
 
-  const calculateGDP = (e: FormEvent) => {
+  const calculateGDP = async (e: FormEvent) => {
     e.preventDefault();
     const gdpValue = parseFloat(gdp);
-    const populationValue = parseFloat(population);
 
-    if (gdpValue && populationValue) {
-      const gdpPerCapita = gdpValue / populationValue;
+    if (gdpValue) {
+      const gdpPerCapita = gdpValue;
       setResult(gdpPerCapita);
+
+      try {
+        const response = await fetch("http://localhost:9090/predict", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            gdp_per_capita: gdpPerCapita,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUrbanizationRate(data.urbanization_rate);
+        } else {
+          console.error("Gagal mendapatkan prediksi urbanisasi");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      }
     }
   };
 
   return (
     <DashboardLayout>
       <div className="flex min-h-screen flex-col items-center p-8">
-        <div className="bg-white p-8 rounded-lg shadow-md w-96">
-          <h1 className="text-2xl font-bold mb-6 text-center">
-            GDP Per Capita Calculator
+        <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700 w-96">
+          <h1 className="text-2xl font-bold mb-6 text-center text-gray-100">
+            GDP Calculator
           </h1>
 
           <form onSubmit={calculateGDP} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                GDP (in billions)
+              <label className="block text-sm font-medium text-gray-300">
+                GDP Per Capita ($)
               </label>
               <input
                 type="number"
                 value={gdp}
                 onChange={(e) => setGdp(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                placeholder="Enter GDP"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Population (in millions)
-              </label>
-              <input
-                type="number"
-                value={population}
-                onChange={(e) => setPopulation(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                placeholder="Enter population"
+                className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                placeholder="Enter GDP Per Capita"
                 required
               />
             </div>
@@ -65,11 +71,19 @@ export default function GDPPage() {
           </form>
 
           {result !== null && (
-            <div className="mt-4 p-4 bg-gray-100 rounded-md">
-              <p className="text-center">
+            <div className="mt-4 p-4 bg-gray-700 rounded-md space-y-2">
+              <p className="text-center text-gray-100">
                 GDP Per Capita:{" "}
                 <span className="font-bold">${result.toFixed(2)}</span>
               </p>
+              {urbanizationRate !== null && (
+                <p className="text-center text-gray-100">
+                  Prediksi Tingkat Urbanisasi:{" "}
+                  <span className="font-bold">
+                    {urbanizationRate.toFixed(2)}%
+                  </span>
+                </p>
+              )}
             </div>
           )}
         </div>

@@ -6,9 +6,11 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   return (
-    <div className="flex">
+    <div className="flex bg-gray-900">
       <Sidebar />
-      <main className="flex-1 ml-64 min-h-screen bg-white">{children}</main>
+      <main className="flex-1 ml-64 min-h-screen bg-gray-900 text-gray-100">
+        {children}
+      </main>
     </div>
   );
 };
