@@ -41,7 +41,7 @@ export default function GDPPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex min-h-screen flex-col items-center p-8">
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
         <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700 w-96">
           <h1 className="text-2xl font-bold mb-6 text-center text-gray-100">
             GDP Calculator

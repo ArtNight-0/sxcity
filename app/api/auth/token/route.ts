@@ -12,8 +12,9 @@ export async function POST(request: Request) {
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
-        client_id: "9d6a4488-0aa2-42b3-bc7d-2a296b4b5be4",
-        client_secret: "26VDja09WcxfenMWAjquYyh51B7UteUXw6mh0Q9Q",
+        client_id: " 9db2804e-604f-46c0-8e15-da79bf800511",
+        // client_secret: "26VDja09WcxfenMWAjquYyh51B7UteUXw6mh0Q9Q",
+        client_secret: "E8oDc2DMIbqZHBgWs7xoXzfnUQJSOx0zRTsiX5f7",
         redirect_uri: "http://localhost:3000/auth/callback",
         code: body.code,
       }),

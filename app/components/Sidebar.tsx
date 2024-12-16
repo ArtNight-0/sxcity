@@ -10,6 +10,7 @@ import {
   FileText,
   Settings,
   Calculator,
+  Box,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
@@ -103,7 +104,7 @@ export default function Sidebar() {
     <div className="w-64 h-screen bg-gray-800 border-r border-gray-700 fixed left-0 top-0 flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-gray-700">
-        <h1 className="text-xl font-semibold text-gray-100">Dashboard</h1>
+        <h1 className="text-xl font-semibold text-gray-100">Smart City</h1>
       </div>
 
       {/* User Info */}
@@ -115,7 +116,11 @@ export default function Sidebar() {
               <p className="text-sm font-medium text-gray-100">{user.name}</p>
               <p className="text-xs text-gray-400">{user.email}</p>
               <p className="text-xs text-gray-400 capitalize">
-                Role: {user.role}
+                {user.role === "admin" && (
+                  <span className="bg-yellow-100 text`-yellow-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-yellow-900 dark:text-yellow-300">
+                    Admin
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -140,25 +145,25 @@ export default function Sidebar() {
           <span>Dashboard</span>
         </Link>
         <Link
-          href="/statistik"
+          href="/weather"
           className="flex items-center space-x-2 px-3 py-2 text-gray-400 hover:bg-gray-700 hover:text-gray-100 rounded-lg"
         >
           <BarChart2 size={18} />
-          <span>Statistik</span>
+          <span>Weather Predict</span>
         </Link>
-        <Link
+        {/* <Link
           href="/laporan"
           className="flex items-center space-x-2 px-3 py-2 text-gray-400 hover:bg-gray-700 hover:text-gray-100 rounded-lg"
         >
           <FileText size={18} />
-          <span>Laporan</span>
-        </Link>
+          <span>Economic Growth</span>
+        </Link> */}
         <Link
-          href="/pengaturan"
+          href="/birthrate"
           className="flex items-center space-x-2 px-3 py-2 text-gray-400 hover:bg-gray-700 hover:text-gray-100 rounded-lg"
         >
           <Settings size={18} />
-          <span>Pengaturan</span>
+          <span>Birth Rate Growth</span>
         </Link>
         <Link
           href="/gdp"
@@ -166,6 +171,13 @@ export default function Sidebar() {
         >
           <Calculator size={18} />
           <span>GDP Calculator</span>
+        </Link>
+        <Link
+          href="/3d"
+          className="flex items-center space-x-2 px-3 py-2 text-gray-400 hover:bg-gray-700 hover:text-gray-100 rounded-lg"
+        >
+          <Box size={18} />
+          <span>3D Scene</span>
         </Link>
       </nav>
 
