@@ -5,7 +5,17 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import Cookies from "js-cookie";
 
-// Fungsi untuk generate random string
+// Konfigurasi OAuth Laravel Passport
+const OAUTH_CLIENT_ID = process.env.NEXT_PUBLIC_PASSPORT_CLIENT_ID || "";
+const OAUTH_CLIENT_SECRET =
+  process.env.NEXT_PUBLIC_PASSPORT_CLIENT_SECRET || "";
+const OAUTH_REDIRECT_URI =
+  process.env.NEXT_PUBLIC_OAUTH_REDIRECT_URI ||
+  "http://localhost:3000/auth/callback";
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://sccic-ssoserver.test";
+
+// Fungsi generate state untuk keamanan CSRF
 const generateState = () => {
   return (
     Math.random().toString(36).substring(2, 15) +
@@ -19,86 +29,66 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const router = useRouter();
 
+  // Login tradisional
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const response = await axios.post("/api/auth/login", {
-        email,
-        password,
-      });
+    setError("");
 
-      if (response.data?.data?.access_token) {
-        Cookies.set("token", response.data.data.access_token, {
+    try {
+      const response = await axios.post(
+        `${BACKEND_URL}/api/auth/login`,
+        {
+          email,
+          password,
+        },
+        {
+          withCredentials: true,
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Simpan token dari login standar
+      if (response.data.access_token) {
+        Cookies.set("token", response.data.access_token, {
           expires: 1,
           path: "/",
+          sameSite: "strict",
         });
-
-        console.log("Token saved in cookies");
         router.push("/dashboard");
-        router.refresh();
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      setError("Login gagal. Silakan cek email dan password Anda.");
+    } catch (error: any) {
+      setError(
+        error.response?.data?.message ||
+          "Login gagal. Silakan periksa email dan password."
+      );
     }
   };
 
-  const handleSSOLogin = async () => {
-    try {
-      // Cek dulu status login di SSO server
-      const checkResponse = await axios
-        .get("http://sccic-ssoserver.test/api/auth/profile", {
-          withCredentials: true,
-        })
-        .catch(() => null);
-      console.log(checkResponse);
+  // Login OAuth Laravel Passport
+  const handleOAuthLogin = () => {
+    // Generate state untuk keamanan
+    const state = generateState();
 
-      if (checkResponse?.data?.user) {
-        // Jika sudah login di SSO, langsung minta token
-        const tokenResponse = await axios.post(
-          "http://sccic-ssoserver.test/oauth/token",
-          {
-            grant_type: "password",
-            client_id: process.env.NEXT_PUBLIC_SSO_CLIENT_ID,
-            client_secret: process.env.NEXT_PUBLIC_SSO_CLIENT_SECRET,
-            username: checkResponse.data.user.email,
-          }
-        );
+    // Simpan state di cookies
+    Cookies.set("oauth_state", state, {
+      expires: 0.5 / 24, // Berlaku 30 menit
+      sameSite: "strict",
+    });
 
-        if (tokenResponse.data?.access_token) {
-          Cookies.set("token", tokenResponse.data.access_token, {
-            expires: 1,
-            path: "/",
-          });
-          router.push("/dashboard");
-          return;
-        }
-      }
+    // Parameter OAuth sesuai Laravel Passport
+    const params = new URLSearchParams({
+      client_id: OAUTH_CLIENT_ID,
+      redirect_uri: OAUTH_REDIRECT_URI,
+      response_type: "code",
+      scope: "",
+      state: state,
+    });
 
-      // Jika belum login, lanjut ke flow SSO normal
-      const state = generateState();
-      Cookies.set("oauth_state", state, {
-        expires: 1 / 24,
-        path: "/",
-        sameSite: "lax",
-      });
-
-      const ssoParams = {
-        client_id: process.env.NEXT_PUBLIC_SSO_CLIENT_ID,
-        redirect_uri: process.env.NEXT_PUBLIC_SSO_REDIRECT_URI,
-        response_type: "code",
-        scope: "*",
-        state: state,
-      };
-
-      const ssoUrl =
-        "http://sccic-ssoserver.test/oauth/authorize?" +
-        new URLSearchParams(ssoParams).toString();
-
-      window.location.href = ssoUrl;
-    } catch (error) {
-      console.error("SSO Login error:", error);
-    }
+    // Redirect ke halaman otorisasi
+    window.location.href = `${BACKEND_URL}/oauth/authorize?${params.toString()}`;
   };
 
   return (
@@ -113,41 +103,35 @@ export default function LoginPage() {
           )}
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+        <form onSubmit={handleLogin} className="space-y-6">
           <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-              />
-            </div>
-            <div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-              />
-            </div>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="appearance-none rounded-t-md relative block w-full px-3 py-2 border border-gray-300 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="appearance-none rounded-b-md relative block w-full px-3 py-2 border border-gray-300 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
           </div>
 
-          <div>
-            <button
-              type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Login
-            </button>
-          </div>
+          <button
+            type="submit"
+            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+          >
+            Login
+          </button>
         </form>
 
-        <div className="mt-6">
+        <div className="mt-4 text-center">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300" />
@@ -157,22 +141,12 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="mt-6">
-            <button
-              type="button"
-              onClick={handleSSOLogin}
-              className="w-full inline-flex justify-center items-center gap-2 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 000 12zm-1-5a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Login dengan SSO
-            </button>
-          </div>
+          <button
+            onClick={handleOAuthLogin}
+            className="mt-4 w-full inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Login dengan OAuth
+          </button>
         </div>
       </div>
     </div>
